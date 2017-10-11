@@ -6,51 +6,31 @@
 #include <sstream>
 #include <cstdlib>
 #include <cstdio>
+#include <iomanip>
 
-void display_help()
+std::vector<std::pair<std::string, std::size_t>> read_in_topics(std::istream& istr)
 {
-	std::cerr << "USAGE: ./topic_assignment [topic_file] [student_preference_file] [preference_values_file]" << std::endl;
-	std::cerr << "[topic_file]: File in which each line contains the name of a topic" << std::endl;
-	std::cerr << "[student_preference_file]: File in which each line contains a student. Lines start with a name of the student (without spaces) followed by the topic ids (start at 1 for the first topic) ordered by preference." << std::endl;
-	std::cerr << "                           Example: Benjamin 3 2 4 (means that student Benjamin prefers to have topic 3 over 2 over 4)" << std::endl;
-	std::cerr << "[preference_values_file]: File in which line n contains one single number specifying how much weight is put on the weight is put on n-th choice of a student" << std::endl;
+	std::vector<std::pair<std::string, std::size_t>> topics;
+	std::string topic_line;
+	while(std::getline(istr, topic_line))
+	{
+		if(topic_line.empty())
+			continue;
+
+		topics.push_back({ topic_line, 1 });
+	}
+
+	return topics;
 }
 
-int main(int argc, char *argv[])
+
+std::vector<std::pair<std::string, std::vector<unsigned>>> read_in_student_preferences(std::istream& istr)
 {
-	if(argc == 2 && (std::string(argv[1]) == "help" || std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help"))
-	{
-		display_help();
-		return 0;
-	}
-
-	if(argc != 4)
-	{
-		std::cerr << "Please provide all needed parameters." << std::endl;
-		display_help();
-		return 1;
-	}
-
-	std::string topics_file_path = argv[1];
-	std::string student_file_path = argv[2];
-	std::string weight_file_path = argv[3];
-
-	// read in topics
-	std::vector<std::string> topic_titles;
-	std::ifstream topics_file(topics_file_path);
-	std::string topic;
-	while(std::getline(topics_file, topic))
-	{
-		if(!topic.empty())
-			topic_titles.push_back(topic);
-	}
-
 	// read in student preferences
 	std::map<std::string, std::vector<unsigned>> student_preferences;
-	std::ifstream student_preferences_file(student_file_path);
 	std::string line;
 	std::size_t i_line = 1;
-	while(std::getline(student_preferences_file, line))
+	while(std::getline(istr, line))
 	{
 		std::stringstream ss(line);
 		std::string student_name;
@@ -62,8 +42,7 @@ int main(int argc, char *argv[])
 			ss >> preference;
 			if(preference == 0)
 			{
-				std::cerr << "Parsing error in student preference file at line " << i_line << std::endl;
-				return 1;
+				throw std::logic_error("Parsing error in student preference file at line " +  std::to_string(i_line));
 			}
 			student_topic_preferences.push_back(preference);
 		}
@@ -73,31 +52,69 @@ int main(int argc, char *argv[])
 		i_line++;
 	}
 
-	for(auto pref : student_preferences)
-	{
-		std::cout << pref.first << " ";
-		for(auto v : pref.second)
-			std::cout << v << " ";
-		std::cout << std::endl;
-	}
-	std::cout << "........" << std::endl;
+	return std::vector<std::pair<std::string, std::vector<unsigned>>>(student_preferences.begin(), student_preferences.end());
+}
 
-
-
-	std::vector<std::pair<std::string, std::vector<unsigned>>> student_preferences_vec(student_preferences.begin(), student_preferences.end());
-
-	// read in weights on preferences
+std::vector<unsigned> read_in_weights(std::istream& istr)
+{
 	std::vector<unsigned> weights;
-	std::ifstream weight_file(weight_file_path);
-	while(!weight_file.eof())
+	while(!istr.eof())
 	{
 		unsigned weight;	
-		weight_file >> weight;
+		istr >> weight;
 		weights.push_back(weight);
 	}
 
-	// build c matrix
-	std::vector<std::vector<unsigned>> c_matrix(student_preferences.size(), std::vector<unsigned>(topic_titles.size(), 0));
+	return weights;
+}
+
+void display_help(std::ostream& out)
+{
+	constexpr std::size_t width = 30;
+
+	out << "USAGE: ./topic_assignment [topic_file] [student_preference_file] [preference_values_file]" << std::endl;
+	out << std::left << std::setw(width) << "[topic_file]:" << "File in which each line contains the name of a topic" << std::endl;
+	out << std::left << std::setw(width) << "[student_preference_file]:" << "File in which each line contains a student. Lines start with a name of the student (without spaces) followed by the topic ids (start at 1 for the first topic) ordered by preference.";
+	out << " { Example: Benjamin 3 2 4 (means that student Benjamin prefers to have topic 3 over 2 over 4) }" << std::endl;
+	out << std::left << std::setw(width) << "[preference_values_file]:" << "File in which line n contains one single number specifying how much weight is put on the weight is put on n-th choice of a student" << std::endl;
+}
+
+int main(int argc, char *argv[])
+{
+	// check if help was requested
+	if(argc == 2 && (std::string(argv[1]) == "help" || std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help"))
+	{
+		display_help(std::cout);
+		return 0;
+	}
+
+	// check if all parameters were specified
+	if(argc != 4)
+	{
+		std::cerr << "Please provide all needed parameters." << std::endl;
+		display_help(std::cerr);
+		return 1;
+	}
+
+	// open files
+	std::ifstream topics_file(argv[1]), student_preferences_file(argv[2]), weight_file(argv[3]);
+
+	// read in data
+	auto topics = read_in_topics(topics_file);
+	auto student_preferences = read_in_student_preferences(student_preferences_file);
+	auto weights = read_in_weights(weight_file);
+
+	std::size_t n_students = student_preferences.size();
+	std::size_t n_distinct_topics = topics.size();
+	std::size_t n_topics = 0;
+	for(auto topic : topics)
+		n_topics += topic.second;
+
+	if(n_students != n_topics)
+		throw std::logic_error("Number of all topics (with potential duplicates) does not match number of students.");
+
+	// build cost matrix
+	std::vector<std::vector<unsigned>> c_matrix(student_preferences.size(), std::vector<unsigned>(n_distinct_topics, 0));
 	std::size_t i_student = 0;
 	for(auto student_preference : student_preferences)
 	{
@@ -109,24 +126,15 @@ int main(int argc, char *argv[])
 		i_student++;
 	}
 
-	for(std::size_t i_student = 0; i_student < student_preferences.size(); i_student++)
-	{
-		for(std::size_t i_topic = 0; i_topic < topic_titles.size(); i_topic++)
-			std::cout << c_matrix[i_student][i_topic] << " ";
-		std::cout << std::endl;
-	}
-
-	std::cout << student_preferences.size() << " " << topic_titles.size() << " " << weights.size() << std::endl;
-
-	// --- build lp file ---
+	// build lp file
 	std::ofstream topic_assignment_lp_file("topic_assignment.lp");
 	topic_assignment_lp_file << "/* Generated by ./topic_assignment */" << std::endl << std::endl;
 
 	// build target function
 	topic_assignment_lp_file << "max: ";
 	bool first = true;
-	for(std::size_t i_student = 0; i_student < student_preferences.size(); i_student++)
-		for(std::size_t i_topic = 0; i_topic < topic_titles.size(); i_topic++)
+	for(std::size_t i_student = 0; i_student < n_students; i_student++)
+		for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
 		{
 			if(c_matrix[i_student][i_topic] == 0)
 				continue;
@@ -142,10 +150,10 @@ int main(int argc, char *argv[])
 
 	// build constraint that each topic is only picked by one student
 	topic_assignment_lp_file << "/* constraint that each topic is only picked by one student */" << std::endl << std::endl;
-	for(std::size_t i_topic = 0; i_topic < topic_titles.size(); i_topic++)
+	for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
 	{
 		first = true;
-		for(std::size_t i_student = 0; i_student < student_preferences.size(); i_student++)
+		for(std::size_t i_student = 0; i_student < n_students; i_student++)
 		{
 			if(first)
 				first = false;
@@ -160,10 +168,10 @@ int main(int argc, char *argv[])
 
 	// build constraint that each student only picks one topic
 	topic_assignment_lp_file << "/* build constraint that each student only picks one topic */" << std::endl << std::endl;
-	for(std::size_t i_student = 0; i_student < student_preferences.size(); i_student++)
+	for(std::size_t i_student = 0; i_student < n_students; i_student++)
 	{
 		first = true;
-		for(std::size_t i_topic = 0; i_topic < topic_titles.size(); i_topic++)
+		for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
 		{
 			if(first)
 				first = false;
@@ -176,8 +184,8 @@ int main(int argc, char *argv[])
 	}
 	topic_assignment_lp_file << std::endl;
 
-	for(std::size_t i_topic = 0; i_topic < topic_titles.size(); i_topic++)
-		for(std::size_t i_student = 0; i_student < student_preferences.size(); i_student++)
+	for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
+		for(std::size_t i_student = 0; i_student < n_students; i_student++)
 			topic_assignment_lp_file <<  "bin x_" << i_student << "_" << i_topic << ";" << std::endl;
 
 
@@ -186,7 +194,8 @@ int main(int argc, char *argv[])
 
 	// open output file and read it
 	std::ifstream result_file("assignment_out.txt");
-	std::vector<std::vector<unsigned>> result_matrix(student_preferences.size(), std::vector<unsigned>(topic_titles.size(), 0));
+	std::vector<std::vector<unsigned>> result_matrix(n_students, std::vector<unsigned>(n_distinct_topics, 0));
+	std::string line;
 	while(std::getline(result_file, line))
 	{
 		std::stringstream ss(line);
@@ -209,10 +218,10 @@ int main(int argc, char *argv[])
 	}
 
 	// check consistency of result_matrix
-	for(std::size_t i_student = 0; i_student < student_preferences.size(); i_student++)
+	for(std::size_t i_student = 0; i_student < n_students; i_student++)
 	{
 		std::size_t n_trues = 0;
-		for(std::size_t i_topic = 0; i_topic < topic_titles.size(); i_topic++)
+		for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
 			n_trues += (result_matrix[i_student][i_topic]) ? 1 : 0;
 		if(n_trues != 1)
 		{
@@ -220,10 +229,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	for(std::size_t i_topic = 0; i_topic < topic_titles.size(); i_topic++)
+	for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
 	{
 		std::size_t n_trues = 0;
-		for(std::size_t i_student = 0; i_student < student_preferences.size(); i_student++)
+		for(std::size_t i_student = 0; i_student < n_students; i_student++)
 			n_trues += (result_matrix[i_student][i_topic]) ? 1 : 0;
 		if(n_trues != 1)
 		{
@@ -232,11 +241,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	for(std::size_t i_student = 0; i_student < student_preferences.size(); i_student++)
-		for(std::size_t i_topic = 0; i_topic < topic_titles.size(); i_topic++)
+	for(std::size_t i_student = 0; i_student < n_students; i_student++)
+		for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
 			if(result_matrix[i_student][i_topic])
 			{
-				std::cout <<  student_preferences_vec[i_student].first << " get the topic " << topic_titles[i_topic] << std::endl;
+				std::cout <<  student_preferences[i_student].first << " get the topic " << topics[i_topic].first << std::endl;
 				break;
 			}
 
