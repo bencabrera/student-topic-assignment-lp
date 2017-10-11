@@ -14,10 +14,13 @@ std::vector<std::pair<std::string, std::size_t>> read_in_topics(std::istream& is
 	std::string topic_line;
 	while(std::getline(istr, topic_line))
 	{
-		if(topic_line.empty())
+		auto x_pos = topic_line.find_first_of("x");
+		std::string num = topic_line.substr(0, x_pos);
+		std::string title = topic_line.substr(x_pos+1);
+		if(title.empty())
 			continue;
 
-		topics.push_back({ topic_line, 1 });
+		topics.push_back({ title, std::stoul(num) });
 	}
 
 	return topics;
@@ -81,6 +84,7 @@ void display_help(std::ostream& out)
 
 int main(int argc, char *argv[])
 {
+	try {
 	// check if help was requested
 	if(argc == 2 && (std::string(argv[1]) == "help" || std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help"))
 	{
@@ -110,8 +114,8 @@ int main(int argc, char *argv[])
 	for(auto topic : topics)
 		n_topics += topic.second;
 
-	if(n_students != n_topics)
-		throw std::logic_error("Number of all topics (with potential duplicates) does not match number of students.");
+	if(n_students > n_topics)
+		throw std::logic_error("Number of all topics (with potential duplicates) has to be larger than number of students.");
 
 	// build cost matrix
 	std::vector<std::vector<unsigned>> c_matrix(student_preferences.size(), std::vector<unsigned>(n_distinct_topics, 0));
@@ -148,8 +152,8 @@ int main(int argc, char *argv[])
 		}
 	topic_assignment_lp_file << ";" << std::endl << std::endl;
 
-	// build constraint that each topic is only picked by one student
-	topic_assignment_lp_file << "/* constraint that each topic is only picked by one student */" << std::endl << std::endl;
+	// build constraint that each topic is only picked as often as specified
+	topic_assignment_lp_file << "/* build constraint that each topic is only picked as often as specified */" << std::endl << std::endl;
 	for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
 	{
 		first = true;
@@ -162,7 +166,7 @@ int main(int argc, char *argv[])
 
 			topic_assignment_lp_file <<  "x_" << i_student << "_" << i_topic;
 		}
-		topic_assignment_lp_file <<  " = 1;" << std::endl;
+		topic_assignment_lp_file <<  " <= " << topics[i_topic].second << ";" << std::endl;
 	}
 	topic_assignment_lp_file << std::endl;
 
@@ -217,40 +221,46 @@ int main(int argc, char *argv[])
 			result_matrix[i_student][i_topic] = 1;
 	}
 
-	// check consistency of result_matrix
+	// check consistency of result_matrix (every student has exactly one topic)
 	for(std::size_t i_student = 0; i_student < n_students; i_student++)
 	{
 		std::size_t n_trues = 0;
 		for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
 			n_trues += (result_matrix[i_student][i_topic]) ? 1 : 0;
+
 		if(n_trues != 1)
-		{
-			std::cerr << "Error" << std::endl;
-		}
+			throw std::logic_error("Error in the output of lp_solve: Student " + student_preferences[i_student].first + " should have exactly one topic but has " + std::to_string(n_trues) + ".");
 	}
 
+	// check consistency of result_matrix (every topic is picked by exactly one student)
 	for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
 	{
 		std::size_t n_trues = 0;
 		for(std::size_t i_student = 0; i_student < n_students; i_student++)
 			n_trues += (result_matrix[i_student][i_topic]) ? 1 : 0;
-		if(n_trues != 1)
-		{
-			std::cerr << "Error" << std::endl;
-			return 1;
-		}
+
+		if(n_trues > topics[i_topic].second)
+			throw std::logic_error("Error in the output of lp_solve: Topic " + topics[i_topic].first + " should have been picked exactly " + std::to_string(topics[i_topic].second) + " times but has been picked " + std::to_string(n_trues) + " times.");
 	}
 
 	for(std::size_t i_student = 0; i_student < n_students; i_student++)
 		for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
 			if(result_matrix[i_student][i_topic])
 			{
-				std::cout <<  student_preferences[i_student].first << " get the topic " << topics[i_topic].first << std::endl;
+				std::cout <<  std::left << std::setw(20) << student_preferences[i_student].first << " --->    " << topics[i_topic].first << std::endl;
 				break;
 			}
 
+	// delete files that were created
 	std::remove("topic_assignment.lp");
 	std::remove("assignment_out.txt");
+
+	} 
+	catch(const std::logic_error& err)
+	{
+		std::cerr << "FATAL ERROR: " << err.what() << std::endl;
+		return 1;
+	}
 
 	return 0;
 }

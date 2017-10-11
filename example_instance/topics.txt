@@ -1,14 +1,14 @@
-Thema 1: Kürzeste Wege und Spannbäume in Graphen
-Thema 2: Netzwerkflüsse und das Max-Flow/Min-Cut Theorem
-Thema 3: Das Problem des chinesischen Postboten
-Thema 4: Der Vier-Farben-Satz
-Thema 5: Planare Graphen und Graph-Minoren
-Thema 6: Zeichnen von Graphen mit physikalisch-inspirierten Methoden
-Thema 7: Baumweite und dynamisches Programmieren
-Thema 8: Algebraischer Ansatz zur Graphersetzung
-Thema 9: Graphtransformation durch Ersetzung von (Hyper-)Kanten
-Thema 10: Zentralitätsmaße (evtl. PageRank)
-Thema 11: Small Worlds: Modelle für soziale Netzwerke und das Internet
-Thema 12: Cluster Analyse und Community Detection
-Thema 13: Main Path Analyse
-Thema 14: Bayessche Netze
+2xThema 1: Kürzeste Wege und Spannbäume in Graphen
+1xThema 2: Netzwerkflüsse und das Max-Flow/Min-Cut Theorem
+1xThema 3: Das Problem des chinesischen Postboten
+1xThema 4: Der Vier-Farben-Satz
+1xThema 5: Planare Graphen und Graph-Minoren
+1xThema 6: Zeichnen von Graphen mit physikalisch-inspirierten Methoden
+1xThema 7: Baumweite und dynamisches Programmieren
+1xThema 8: Algebraischer Ansatz zur Graphersetzung
+1xThema 9: Graphtransformation durch Ersetzung von (Hyper-)Kanten
+1xThema 10: Zentralitätsmaße (evtl. PageRank)
+1xThema 11: Small Worlds: Modelle für soziale Netzwerke und das Internet
+1xThema 12: Cluster Analyse und Community Detection
+1xThema 13: Main Path Analyse
+1xThema 14: Bayessche Netze
