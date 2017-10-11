@@ -75,11 +75,12 @@ void display_help(std::ostream& out)
 {
 	constexpr std::size_t width = 30;
 
-	out << "USAGE: ./topic_assignment [topic_file] [student_preference_file] [preference_values_file]" << std::endl;
-	out << std::left << std::setw(width) << "[topic_file]:" << "File in which each line contains the name of a topic" << std::endl;
+	out << "USAGE: ./topic_assignment [topic_file] [student_preference_file] [preference_values_file]" << std::endl << std::endl;
+	out << std::left << std::setw(width) << "[topic_file]:" << "File in which each line contains the name of a topic. The line always has to start with a multiplicity, e.g. 1x, 2x, ..." << std::endl;
 	out << std::left << std::setw(width) << "[student_preference_file]:" << "File in which each line contains a student. Lines start with a name of the student (without spaces) followed by the topic ids (start at 1 for the first topic) ordered by preference.";
 	out << " { Example: Benjamin 3 2 4 (means that student Benjamin prefers to have topic 3 over 2 over 4) }" << std::endl;
-	out << std::left << std::setw(width) << "[preference_values_file]:" << "File in which line n contains one single number specifying how much weight is put on the weight is put on n-th choice of a student" << std::endl;
+	out << std::left << std::setw(width) << "[preference_values_file]:" << "File in which line n contains one single number specifying how much weight is put on the weight is put on n-th choice of a student" << std::endl << std::endl;
+	out << std::left << std::setw(width) << "For a specific example see the folder 'example_instance'" << std::endl;
 }
 
 int main(int argc, char *argv[])

@@ -1,14 +1,14 @@
-2xThema 1: Kürzeste Wege und Spannbäume in Graphen
-1xThema 2: Netzwerkflüsse und das Max-Flow/Min-Cut Theorem
-1xThema 3: Das Problem des chinesischen Postboten
-1xThema 4: Der Vier-Farben-Satz
-1xThema 5: Planare Graphen und Graph-Minoren
-1xThema 6: Zeichnen von Graphen mit physikalisch-inspirierten Methoden
-1xThema 7: Baumweite und dynamisches Programmieren
-1xThema 8: Algebraischer Ansatz zur Graphersetzung
-1xThema 9: Graphtransformation durch Ersetzung von (Hyper-)Kanten
-1xThema 10: Zentralitätsmaße (evtl. PageRank)
-1xThema 11: Small Worlds: Modelle für soziale Netzwerke und das Internet
-1xThema 12: Cluster Analyse und Community Detection
-1xThema 13: Main Path Analyse
-1xThema 14: Bayessche Netze
+2xTopic1
+1xTopic2
+1xTopic3
+1xTopic4
+1xTopic5
+1xTopic6
+1xTopic7
+1xTopic8
+1xTopic9
+1xTopic10
+1xTopic11
+1xTopic12
+1xTopic13
+1xTopic14
