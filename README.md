@@ -1,7 +1,8 @@
 # Student to Topic assignment CLI (using linear optimization)
 
-This C++ program can be used to find an assignment of students to topics using a Linear Program (LP) optimization.
+This C++ program can be used to find an assignment of students to topics using a linear optimization, i.e. a Linear Program (LP).
 Students can choose preferences on topics and the program will find the assignment that is globally optimal.
+To be more precise, a student that gets assigned their first priority adds e.g. 10 points to the overall score, one that get assigned their second choice only adds 8 points etc. The program then calls the LP solver ```lp_solve``` to maximize the overall score under constraints like that every student gets only assigned one topic. 
 
 ## Installation
 
@@ -20,7 +21,7 @@ git clone git@github.com:bencabrera/student-topic-assignment-lp.git
 make
 ```
 
-- **Step 4:** Go to the bin folder to find the binary. To show the help run 
+- **Step 4:** Go to the ```bin``` folder to find the binary. To show the help run 
 ```
 ./topic_assignment -h
 ```
@@ -28,3 +29,8 @@ or to run the provided example run
 ```
 ./topic_assignment ../example_instance/topics.txt ../example_instance/student_preferences.txt  ../example_instance/weights
 ```
+
+
+## License
+
+The code is provided free of all warranty via the MIT license (see LICENSE.md).
