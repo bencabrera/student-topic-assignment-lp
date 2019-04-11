@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <iomanip>
+#include "libs/cxxopts/cxxopts.hpp"
 
 std::vector<std::pair<std::string, std::size_t>> read_in_topics(std::istream& istr)
 {
@@ -71,38 +72,46 @@ std::vector<unsigned> read_in_weights(std::istream& istr)
 	return weights;
 }
 
-void display_help(std::ostream& out)
+int main(int argc, const char** argv)
 {
-	constexpr std::size_t width = 30;
 
-	out << "USAGE: ./topic_assignment [topic_file] [student_preference_file] [preference_values_file]" << std::endl << std::endl;
-	out << std::left << std::setw(width) << "[topic_file]:" << "File in which each line contains the name of a topic. The line always has to start with a multiplicity, e.g. 1x, 2x, ..." << std::endl;
-	out << std::left << std::setw(width) << "[student_preference_file]:" << "File in which each line contains a student. Lines start with a name of the student (without spaces) followed by the topic ids (start at 1 for the first topic) ordered by preference.";
-	out << " { Example: Benjamin 3 2 4 (means that student Benjamin prefers to have topic 3 over 2 over 4) }" << std::endl;
-	out << std::left << std::setw(width) << "[preference_values_file]:" << "File in which line n contains one single number specifying how much weight is put on the weight is put on n-th choice of a student" << std::endl << std::endl;
-	out << std::left << std::setw(width) << "For a specific example see the folder 'example_instance'" << std::endl;
-}
+    cxxopts::Options options("Student topic assignment tool", "Student topic assignment tool");
+	options.add_options()
+		("h,help", "Produce help message.")
+		("t,topics", "File in which each line contains the name of a topic. The line always has to start with a multiplicity, e.g. 1x, 2x, ...", cxxopts::value<std::string>())
+		("p,preferences", "File in which each line contains a student. Lines start with a name of the student (without spaces) followed by the topic ids (start at 1 for the first topic) ordered by preference.", cxxopts::value<std::string>())
+		("w,weights", "File in which line n contains one single number specifying how much weight is put on the weight is put on n-th choice of a student.", cxxopts::value<std::string>())
+		("r,show-results", "Assignments of students to topics are only shown if this flag is set.")
+	;
+	auto args = options.parse(argc, argv);
 
-int main(int argc, char *argv[])
-{
-	try {
-	// check if help was requested
-	if(argc == 2 && (std::string(argv[1]) == "help" || std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help"))
-	{
-		display_help(std::cout);
+	if (args.count("help")) {
+		std::cout << options.help() << std::endl;
 		return 0;
 	}
 
 	// check if all parameters were specified
-	if(argc != 4)
+	if(args.count("topics") == 0 || args.count("preferences") == 0 || args.count("weights") == 0)
 	{
-		std::cerr << "Please provide all needed parameters." << std::endl;
-		display_help(std::cerr);
+		std::cerr << "Please provide --topics, --preferences, and --weights." << std::endl;
 		return 1;
 	}
 
 	// open files
-	std::ifstream topics_file(argv[1]), student_preferences_file(argv[2]), weight_file(argv[3]);
+	std::ifstream topics_file(args["topics"].as<std::string>()), student_preferences_file(args["preferences"].as<std::string>()), weight_file(args["weights"].as<std::string>());
+
+	if(!topics_file.is_open()) {
+		std::cerr << "Topics file could not be opened." << std::endl;
+		return 1;
+	}
+	if(!student_preferences_file.is_open()) {
+		std::cerr << "Preferences file could not be opened." << std::endl;
+		return 1;
+	}
+	if(!weight_file.is_open()) {
+		std::cerr << "Weights file could not be opened." << std::endl;
+		return 1;
+	}
 
 	// read in data
 	auto topics = read_in_topics(topics_file);
@@ -222,6 +231,26 @@ int main(int argc, char *argv[])
 			result_matrix[i_student][i_topic] = 1;
 	}
 
+	// build map that assigns student number
+	std::map<std::size_t,std::size_t> student_to_topic;
+	for(std::size_t i_student = 0; i_student < n_students; i_student++)
+		for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
+			if(result_matrix[i_student][i_topic])
+				student_to_topic.insert({ i_student, i_topic });
+
+	// compute number of students that did not get any of their priorities
+	std::size_t n_non_priorities = 0;
+	for(std::size_t i_student = 0; i_student < n_students; i_student++)
+	{
+		bool has_prio = false;
+		for(auto p : student_preferences[i_student].second)
+			if(p == student_to_topic[i_student])
+				has_prio = true;
+
+		if(!has_prio)
+			n_non_priorities++;
+	}
+
 	// check consistency of result_matrix (every student has exactly one topic)
 	for(std::size_t i_student = 0; i_student < n_students; i_student++)
 	{
@@ -244,24 +273,18 @@ int main(int argc, char *argv[])
 			throw std::logic_error("Error in the output of lp_solve: Topic " + topics[i_topic].first + " should have been picked exactly " + std::to_string(topics[i_topic].second) + " times but has been picked " + std::to_string(n_trues) + " times.");
 	}
 
-	for(std::size_t i_student = 0; i_student < n_students; i_student++)
-		for(std::size_t i_topic = 0; i_topic < n_distinct_topics; i_topic++)
-			if(result_matrix[i_student][i_topic])
-			{
-				std::cout <<  std::left << std::setw(20) << student_preferences[i_student].first << " --->    " << topics[i_topic].first << std::endl;
-				break;
-			}
+	// print results
+	std::cout << "Students that did not get any of their priorities: " << n_non_priorities << std::endl;
+
+	if(args.count("show-results"))
+	{
+		for(std::size_t i_student = 0; i_student < n_students; i_student++)
+			std::cout <<  std::left << std::setw(20) << student_preferences[i_student].first << " --->    " << topics[student_to_topic[i_student]].first << std::endl;
+	}
 
 	// delete files that were created
 	std::remove("topic_assignment.lp");
 	std::remove("assignment_out.txt");
-
-	} 
-	catch(const std::logic_error& err)
-	{
-		std::cerr << "FATAL ERROR: " << err.what() << std::endl;
-		return 1;
-	}
 
 	return 0;
 }
