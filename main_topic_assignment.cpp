@@ -244,7 +244,7 @@ int main(int argc, const char** argv)
 	{
 		bool has_prio = false;
 		for(auto p : student_preferences[i_student].second)
-			if(p == student_to_topic[i_student])
+			if(p == student_to_topic[i_student] + 1)
 				has_prio = true;
 
 		if(!has_prio)
